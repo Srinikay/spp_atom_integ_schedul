@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATOM-INTEG Schedule Today</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #F5F7FA; color: #1A1A2E; min-height: 100vh; }
+  header { background: #1F4E79; color: white; padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 20px; font-weight: 600; }
+  header .date { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+  .badge { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 4px 12px; font-size: 12px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+  .total-bar { background: white; border: 1px solid #C6EFCE; border-left: 4px solid #375623; border-radius: 8px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .total-bar-label { font-size: 14px; color: #375623; font-weight: 600; }
+  .total-bar-num { font-size: 28px; font-weight: 700; color: #375623; }
+  .section-header { font-size: 13px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #555; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 1.5px solid #e0e0e0; }
+  .shift-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .shift-card { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; border-top: 3px solid var(--shift-color); }
+  .shift-label { font-size: 13px; font-weight: 600; color: var(--shift-color); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .shift-count { font-size: 26px; font-weight: 700; color: #1A1A2E; line-height: 1; }
+  .shift-unit { font-size: 11px; color: #888; margin-top: 2px; }
+  .tse-divider { border: none; border-top: 1px solid #f0f0f0; margin: 10px 0 8px; }
+  .tse-name { font-size: 12px; color: #444; padding: 2px 0; line-height: 1.5; }
+  .tse-name.empty { color: #bbb; font-style: italic; }
+  .tag { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 20px; margin-left: 4px; }
+  .tag-atom { background: #D6E4F0; color: #1F4E79; }
+  .tag-integ { background: #D9EAD3; color: #274E13; }
+  .status-row { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+  .status-card { flex: 1; min-width: 200px; background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 18px; }
+  .status-card.vacation { border-left: 4px solid #9C27B0; }
+  .status-card.offline  { border-left: 4px solid #D32F2F; }
+  .status-icon { font-size: 18px; margin-bottom: 6px; }
+  .status-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #777; margin-bottom: 6px; }
+  .status-names { font-size: 13px; color: #333; }
+  .status-names.empty { color: #aaa; font-style: italic; }
+  footer { text-align: center; padding: 20px; font-size: 11px; color: #aaa; border-top: 1px solid #e0e0e0; margin-top: 32px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>ATOM-INTEG Schedule Today</h1>
+    <div class="date" id="header-date"></div>
+  </div>
+  <span class="badge">Live View</span>
+</header>
+
+<main>
+  <div class="total-bar">
+    <span class="total-bar-label">&#10003; Total TSEs Available Today</span>
+    <span class="total-bar-num" id="total-count">—</span>
+  </div>
+
+  <div class="section-header">ATOM TSEs</div>
+  <div class="shift-grid" id="atom-grid"></div>
+
+  <div class="section-header">Integ TSEs</div>
+  <div class="shift-grid" id="integ-grid"></div>
+
+  <div class="status-row">
+    <div class="status-card vacation">
+      <div class="status-title">&#127958; Vacation</div>
+      <div class="status-names" id="vacation-names"></div>
+    </div>
+    <div class="status-card offline">
+      <div class="status-title">&#128308; Offline / Sick</div>
+      <div class="status-names" id="offline-names"></div>
+    </div>
+  </div>
+</main>
+
+<footer>ATOM-INTEG SPP &mdash; Schedule data refreshes on page load &mdash; Internal use only</footer>
+
+<script>
+// ── Schedule Data ─────────────────────────────────────────────────────────────
+// Update these lists to reflect today's schedule
+const SHIFTS = [
+  { label: "6 to 3",  key: "6-3",  color: "#274E13" },
+  { label: "8 to 5",  key: "8-5",  color: "#7D6608" },
+  { label: "12 to 9", key: "12-9", color: "#1C4587" },
+  { label: "3 to 12", key: "3-12", color: "#4A1942" },
+  { label: "11 to 8", key: "11-8", color: "#783F04" },
+];
+
+const ATOM = {
+  "6-3":  ["Ankur Sharma"],
+  "8-5":  ["Srinivas Krishnamani","Rahul Bahuguna","Venkateshwarlu Vanga","Rakesh Sharma","Swathi Babu"],
+  "12-9": ["Kaarthiprakash"],
+  "3-12": [],
+  "11-8": ["Vinod Nikhil"],
+};
+
+const INTEG = {
+  "6-3":  ["Vijay Krishna Arawamudhan"],
+  "8-5":  ["Jose Ribera","Nancy Agui De Los Reyes","Rabah Rebai","Siddharth Baid","Titoni Thomas","Venkata Nikhil Tata","Adarsh Goordyal"],
+  "12-9": [],
+  "3-12": ["Rishin Roy"],
+  "11-8": [],
+};
+
+const VACATION = []; // e.g. ["Swathi Babu"]
+const OFFLINE  = []; // e.g. ["Rishin Roy"]
+
+// ── Render ────────────────────────────────────────────────────────────────────
+const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const now = new Date();
+document.getElementById("header-date").textContent =
+  days[now.getDay()] + ", " + now.getDate() + " " + months[now.getMonth()] + " " + now.getFullYear();
+
+function buildGrid(containerId, data, section) {
+  const grid = document.getElementById(containerId);
+  const tagClass = section === "ATOM" ? "tag-atom" : "tag-integ";
+  SHIFTS.forEach(s => {
+    const names = data[s.key] || [];
+    const card = document.createElement("div");
+    card.className = "shift-card";
+    card.style.setProperty("--shift-color", s.color);
+    const nameRows = names.length
+      ? names.map(n => `<div class="tse-name">${n} <span class="tag ${tagClass}">${section}</span></div>`).join("")
+      : `<div class="tse-name empty">No TSEs</div>`;
+    card.innerHTML = `
+      <div class="shift-label">
+        <span class="dot" style="background:${s.color}"></span>${s.label}
+      </div>
+      <div class="shift-count">${names.length}</div>
+      <div class="shift-unit">TSE${names.length !== 1 ? "s" : ""}</div>
+      <hr class="tse-divider">
+      ${nameRows}`;
+    grid.appendChild(card);
+  });
+}
+
+buildGrid("atom-grid",  ATOM,  "ATOM");
+buildGrid("integ-grid", INTEG, "Integ");
+
+const total = Object.values(ATOM).flat().length + Object.values(INTEG).flat().length;
+document.getElementById("total-count").textContent = total;
+
+const vacEl = document.getElementById("vacation-names");
+vacEl.textContent = VACATION.length ? VACATION.join(", ") : "No TSEs on vacation today";
+if (!VACATION.length) vacEl.classList.add("empty");
+
+const offEl = document.getElementById("offline-names");
+offEl.textContent = OFFLINE.length ? OFFLINE.join(", ") : "No TSEs offline or sick today";
+if (!OFFLINE.length) offEl.classList.add("empty");
+</script>
+</body>
+</html>
